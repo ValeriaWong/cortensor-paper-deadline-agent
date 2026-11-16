@@ -182,13 +182,20 @@ def probe_error_and_timeout_contracts(provider: ProviderSettings) -> ProbeResult
 
 def probe_verification_honesty(provider: ProviderSettings, store: VenueStore, today: date) -> ProbeResult:
     """Deterministic: every rendered date carries its status; nothing is upgraded."""
+    from .brief import _line_identity
+
     rows = store.upcoming(120, today)
     brief = build_template_brief("人工智能", rows)
     text = render_brief(brief)
     problems = check_honesty(text, rows)
-    # Also: no date_unclear row may appear with a date.
-    bad = [d.abbreviation for d in store.unclear if d.abbreviation in text and "date unclear" not in text]
-    problems += [f"unclear venue {a} rendered as dated" for a in bad]
+    # No date_unclear venue may appear as a dated deadline line.
+    # Identity is (abbreviation, full_name): FSE/CC/WWW each name two
+    # different venues, one dated and one unclear.
+    unclear_identities = {(d.abbreviation, d.full_name) for d in store.unclear}
+    for line in text.splitlines():
+        ident = _line_identity(line)
+        if ident[0] and ident in unclear_identities:
+            problems.append(f"unclear venue {ident[0]} rendered as dated: {line}")
     return ProbeResult(
         name="verification_honesty",
         status="pass" if not problems else "fail",

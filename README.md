@@ -110,7 +110,7 @@ prompts are kept short; timeouts are generous. The deterministic commands
 ## Tests
 
 ```bash
-.venv/bin/python -m pytest tests/ -q   # 36 tests, zero LLM cost
+.venv/bin/python -m pytest tests/ -q   # 41 tests, zero LLM cost
 ```
 
 The suite covers date parsing (multi-track cells, English month names,

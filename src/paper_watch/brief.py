@@ -124,6 +124,40 @@ def render_brief(brief: Brief) -> str:
     return "\n".join(lines)
 
 
+def _line_abbreviation(line: str) -> str:
+    """Abbreviation of a rendered deadline line (``- ABBR [...]``).
+
+    Matched as the first token only: substring search would false-positive
+    on venues whose *full name* contains another venue's abbreviation
+    (e.g. ICWSM's full name contains "AAAI").
+    """
+    if not line.startswith("- "):
+        return ""
+    parts = line[2:].split(" ", 1)
+    return parts[0] if parts else ""
+
+
+def _line_identity(line: str) -> tuple[str, str]:
+    """(abbreviation, full_name) of a rendered deadline line.
+
+    Identity needs the full name too: two different venues can share an
+    abbreviation (FSE = Foundations of Software Engineering vs Fast
+    Software Encryption), and one of them may be dated while the other
+    is unclear.
+    """
+    abbr = _line_abbreviation(line)
+    if not abbr:
+        return ("", "")
+    rest = line[2 + len(abbr):].strip()
+    # rest is "[GRADE] Full Name — kind deadline ..."
+    if rest.startswith("["):
+        close = rest.find("]")
+        if close >= 0:
+            rest = rest[close + 1:].strip()
+    name = rest.split(" — ", 1)[0].strip()
+    return (abbr, name)
+
+
 def check_honesty(text: str, deadlines: list[Deadline]) -> list[str]:
     """Return a list of honesty violations in a rendered brief.
 
@@ -132,21 +166,16 @@ def check_honesty(text: str, deadlines: list[Deadline]) -> list[str]:
     row rendered with a date.
     """
     problems: list[str] = []
+    by_identity = {(d.abbreviation, d.full_name): d for d in deadlines}
     for line in text.splitlines():
         if not line.startswith("- "):
             continue
         if "[" not in line or "]" not in line:
             problems.append(f"deadline line without status tag: {line}")
             continue
-        for d in deadlines:
-            if d.abbreviation in line and d.deadline_date is None and "date unclear" not in line:
-                problems.append(f"unclear row rendered with a date: {line}")
-    # "verified" must only appear in the key, in [verified] tags, or in
-    # sentences that do not attach it to an unverified venue.
-    for d in deadlines:
-        if d.status == "verified":
-            continue
-        for line in text.splitlines():
-            if d.abbreviation in line and "[verified]" in line:
-                problems.append(f"unverified venue labelled verified: {line}")
+        d = by_identity.get(_line_identity(line))
+        if d is not None and d.deadline_date is None and "date unclear" not in line:
+            problems.append(f"unclear row rendered with a date: {line}")
+        if d is not None and d.status != "verified" and "[verified]" in line:
+            problems.append(f"unverified venue labelled verified: {line}")
     return problems

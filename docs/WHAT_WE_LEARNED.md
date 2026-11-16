@@ -102,9 +102,73 @@ window and model latency, not by our code. Design consequence: the
 default `deadlines` command never touches the model, and the brief
 always has a template to fall back to.
 
-## 7. (Live-run outcomes — filled in after the probe run)
+## 7. Live-run outcomes (2026-11-17, Pollinations free, $0)
 
-- Model brief (Pollinations, topic 人工智能): _pending — see
-  `fixtures/live_run_2026-11-17_brief-ai.json`._
-- Full probe suite (`paper-watch probe`): _pending — see
-  `docs/BUILDING_BLOCKS_TESTED.md`._
+- **Model brief (topic 人工智能): SUCCEEDED on the second attempt**
+  (`fixtures/live_run_2026-11-17_brief-ai.json`, `path: "model"`).
+  The model returned valid `BriefSynthesis` JSON: nearest CVPR
+  (2026-11-16, verified), A-level `[CVPR]`, all four paragraphs copied
+  real venues/dates/statuses from the tool output — no hallucinated
+  venue. Total 900.2 s for the whole brief; the synthesis run alone
+  321.6 s. Stats for that run: `input_tokens` 19860,
+  `output_tokens` 3168, `llm_calls` **8**, `tool_calls` 1,
+  `tool_errors` 0.
+- **One `Agent.run()` = 8 LLM calls.** The stats above show the SDK
+  issues 8 model calls per run (decision + tool loop + internal
+  classification turns). On a 1-reply-per-45-s free tier, a single brief
+  (4 runs) therefore needs ~32 replies from the shared IP pool — that
+  is why the free-tier flow is slow and why the subagents below failed.
+- **Subagents are the fragile part on the free tier.** Both brief
+  subagents failed in the live run: conferences with
+  `EMPTY_PROVIDER_RESPONSE` ("Provider returned no usable entry
+  response after configured retries" — a failure mode distinct from
+  the 402), journals/law with a 402 that survived 3 retries. The
+  brief still succeeded because the main synthesis re-queries the
+  tools itself; subagent notes are advisory only, never load-bearing.
+- **Reminder formatting also 402'd** after retries, and the handoff
+  was not taken (`handoff_taken: false`) — the free model did not
+  transfer to the formatter agent. The reminder is therefore
+  best-effort on this tier; the brief itself is unaffected.
+- **First attempt (before the 402 retry was added): all 3 model calls
+  402'd and the command fell back to the labelled template brief.**
+  The fallback path is exercised, not theoretical.
+- **Full probe suite:** 5/10 pass on the first full run
+  (`docs/BUILDING_BLOCKS_TESTED.md`, 940.7 s total):
+  runtime_isolation, subagent_delegation, submit_turn_streaming_telemetry,
+  memory_bundle_portability, error_and_timeout_contracts passed;
+  structured_output and tool_and_forced_tools partial (the free model
+  answered in prose instead of JSON, and its tool reply carried
+  SDK-internal freshness language — see §8); session_continuity failed
+  on a 402 that survived retries; agent_handoff partial (see §9);
+  verification_honesty failed on a checker bug, not on the agent (the
+  checker matched abbreviations by substring, so ICWSM's full name
+  tripped "AAAI"; fixed to (abbreviation, full_name) identity matching
+  and re-verified 0 violations — see §5).
+- **Telemetry tokens are present here.** The streaming probe's
+  `stats` carried `input_tokens` 8826 / `output_tokens` 829 /
+  `llm_calls` 2 — not zero. (Another entry reported zero token counts
+  in `TurnTelemetry`; in this SDK version the `AgentRunResult.stats`
+  path reports them. Not claimed as a bug either way.)
+
+## 8. SDK-internal language leaks into free-model replies
+
+**Observed in the probe:** the tool probe's reply was not the requested
+JSON but: *"I couldn't provide a grounded current general answer
+because Missing exact-date evidence for an exact-date freshness
+answer."* "Freshness answer" is the SDK's internal classification
+vocabulary (its `FreshnessContract` turn), surfacing verbatim in the
+agent's reply. The streaming probe similarly answered *"I could not
+safely update the task conditions."* These are not model hallucinations
+about our data — they are the runtime's own guardrail phrasing bleeding
+through on a weak free model.
+
+## 9. Handoff is policy-gated, not free
+
+**Observed in the probe:** transferring to the formatter agent did not
+run the target; instead the reply was a policy confirmation prompt:
+*"Policy confirmation required. format_reminder / Risk: write / Side
+effects: local / Reversibility: unknown / Choices: allow_once,
+allow_session, deny / Reply exactly y …"*. A handoff therefore needs
+an approval path (or a pre-issued grant) to complete; without one the
+turn stalls. This explains the brief run's `handoff_taken: false` —
+the formatter was then called directly instead.

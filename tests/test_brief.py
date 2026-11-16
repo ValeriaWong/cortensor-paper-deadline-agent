@@ -55,6 +55,28 @@ def test_honesty_catches_verified_label_on_unverified_row(store):
     assert check_honesty(bad_text, [nxt]) != []
 
 
+def test_honesty_does_not_false_positive_on_substring(store):
+    # ICWSM's full name contains "AAAI", but the line belongs to ICWSM.
+    # An unclear AAAI must not be flagged for ICWSM's line.
+    from paper_watch.store import Deadline
+
+    icwsm = Deadline(
+        abbreviation="ICWSM", full_name="The International AAAI Conference on Web and Social Media",
+        kind="conference", ccf_grade="B", field="人工智能",
+        deadline_date=__import__("datetime").date(2027, 1, 15),
+        deadline_kind="full", track="", timezone="AoE", status="verified",
+        source_url="https://www.icwsm.org/", website="",
+    )
+    aaai_unclear = Deadline(
+        abbreviation="AAAI", full_name="AAAI Conference on Artificial Intelligence",
+        kind="conference", ccf_grade="A", field="人工智能",
+        deadline_date=None, deadline_kind="unclear", track="", timezone="",
+        status="date_unclear", source_url="", website="",
+    )
+    text = "- " + icwsm.one_line()
+    assert check_honesty(text, [icwsm, aaai_unclear]) == []
+
+
 def test_template_flags_unverified_dates(store):
     rows = store.upcoming(120, TODAY)
     matched = match_topic("机器学习", rows)  # NEXT, cycle_not_announced
