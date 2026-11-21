@@ -5,27 +5,14 @@
   "subagents": [
     {
       "source": "conferences",
-      "error": "ProviderError('EMPTY_PROVIDER_RESPONSE: Provider returned no usable entry response after configured retries')"
+      "seconds": 219.8
     },
     {
       "source": "journals and law",
-      "error": "ProviderError('PROVIDER_ERROR: The configured model provider failed before it could return a decision (openai request failed with HTTP 402: Free limit reached: 1 reply every 45 seconds per IP. Retry after 23s, or get unlimited replies with a pollen key at https://enter.pollinatio...). Please retry or switch models.')"
+      "error": "ProviderError('PROVIDER_ERROR: The configured model provider failed before it could return a decision (openai request failed with HTTP 402: Free limit reached: 1 reply every 45 seconds per IP. Retry after 24s, or get unlimited replies with a pollen key at https://enter.pollinatio...). Please retry or switch models.')"
     }
   ],
-  "main_seconds": 321.6,
-  "raw_reply": "paper-watch: {\"paragraphs\":[\"CVPR (IEEE/CVF Conference on Computer Vision and Pattern Recognition) has a full submission deadline on 2026-11-16 and is verified.\", \"BlockSys (International Conference on Blockchain, Artificial Intelligence, and Trustworthy Systems) has a full submission deadline on 2026-11-30 and is verified.\", \"JLAMP (Journal of Logical and Algebraic Methods in Programming) has a fixed submission deadline on 2026-11-30 and is verified.\", \"JAR (Journal of Automated Reasoning) has a fixed submission deadline on 2026-12-01 and is verified.\"],\"nearest_abbreviation\":\"CVPR\",\"a_level_abbreviations\":[\"CVPR\"]}",
-  "stats": {
-    "input_tokens": 19860,
-    "output_tokens": 3168,
-    "cache_read_tokens": 0,
-    "llm_calls": 8,
-    "tool_calls": 1,
-    "tool_errors": 0,
-    "duration_ms": 167703
-  },
-  "thread_id": "0ed1aae8c4f2496ba0c38285bf3a655b:3b2dbc4bdb214bf5aa8f122fdcdad6ca",
-  "path": "model",
-  "handoff_taken": false,
-  "reminder_error": "ProviderError('PROVIDER_ERROR: The configured model provider failed before it could return a decision (openai request failed with HTTP 402: Free limit reached: 1 reply every 45 seconds per IP. Retry after 22s, or get unlimited replies with a pollen key at https://enter.pollinatio...). Please retry or switch models.')",
-  "total_seconds": 900.2
+  "path": "template",
+  "fallback_reason": "agent run failed: ProviderError('PROVIDER_ERROR: The configured model provider failed before it could return a decision (openai request failed with HTTP 402: Free limit reached: 1 reply every 45 seconds per IP. Retry after 10s, or get unlimited replies with a pollen key at https://enter.pollinatio...). Please retry or switch models.')",
+  "total_seconds": 632.6
 }
